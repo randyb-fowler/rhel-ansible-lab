@@ -1,0 +1,34 @@
+- name: Baseline every server
+  hosts: lab
+  become: true
+  tasks:
+    - name: Put the lab names in /etc/hosts
+      ansible.builtin.blockinfile:
+        path: /etc/hosts
+        block: |
+          192.168.15.10 control.lab.local control
+          192.168.15.11 node1.lab.local node1
+          192.168.15.12 node2.lab.local node2
+
+    - name: Install standard admin tools
+      ansible.builtin.dnf:
+        name: [vim-enhanced, bash-completion, chrony, firewalld, yum-utils, tar]
+        state: present
+
+    - name: Make sure time sync and the firewall are running
+      ansible.builtin.service:
+        name: "{{ item }}"
+        state: started
+        enabled: true
+      loop: [chronyd, firewalld]
+
+    - name: Create an ops user
+      ansible.builtin.user:
+        name: opsuser
+        groups: wheel
+        append: true
+
+    - name: Set a login banner
+      ansible.builtin.copy:
+        dest: /etc/motd
+        content: "{{ inventory_hostname }} is managed by Ansible. Manual changes will be overwritten.\n"
