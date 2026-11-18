@@ -1,0 +1,19 @@
+- name: Patch the lab one server at a time
+  hosts: lab
+  become: true
+  serial: 1
+  tasks:
+    - name: Apply all updates
+      ansible.builtin.dnf:
+        name: "*"
+        state: latest
+
+    - name: Check whether a reboot is needed
+      ansible.builtin.command: needs-restarting -r
+      register: reboot_check
+      changed_when: false
+      failed_when: reboot_check.rc not in [0, 1]
+
+    - name: Reboot if the kernel or core libraries changed
+      ansible.builtin.reboot:
+      when: reboot_check.rc == 1

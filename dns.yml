@@ -1,0 +1,16 @@
+- name: Update DNS on all servers
+  hosts: lab
+  become: true
+  tasks:
+    - name: Find the server's internet-facing connection
+      ansible.builtin.command: nmcli -g GENERAL.CONNECTION device show {{ ansible_default_ipv4.interface }}
+      register: conn
+      changed_when: false
+
+    - name: Set the new DNS servers, ignoring the ones DHCP hands out
+      ansible.builtin.command: >
+        nmcli con mod "{{ conn.stdout }}"
+        ipv4.dns "1.1.1.1 8.8.8.8" ipv4.ignore-auto-dns yes
+
+    - name: Apply it without dropping the connection
+      ansible.builtin.command: nmcli device reapply {{ ansible_default_ipv4.interface }}

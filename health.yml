@@ -1,0 +1,21 @@
+- name: Health check every server
+  hosts: lab
+  become: true
+  tasks:
+    - name: Fail if any filesystem is over 80% full
+      ansible.builtin.assert:
+        that: (item.size_total - item.size_available) / item.size_total * 100 < 80
+        fail_msg: "{{ item.mount }} on {{ inventory_hostname }} is over 80% full"
+        success_msg: "{{ item.mount }} OK"
+      loop: "{{ ansible_mounts }}"
+      loop_control:
+        label: "{{ item.mount }}"
+
+    - name: Make sure key services are running
+      ansible.builtin.service_facts:
+
+    - name: Report any stopped critical service
+      ansible.builtin.assert:
+        that: ansible_facts.services[item + '.service'].state == 'running'
+        fail_msg: "{{ item }} is NOT running on {{ inventory_hostname }}"
+      loop: [sshd, chronyd, firewalld]
